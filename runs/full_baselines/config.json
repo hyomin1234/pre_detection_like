@@ -1,8 +1,8 @@
 {
   "lib": [
-    "ASAP7=C:\\0_ht_diff_lib\\plz_result\\03_7_output_asap7_rich\\asap7_gnn_dataset_radar_rich.pkl.gz",
-    "NANGATE15=C:\\0_ht_diff_lib\\plz_result\\03_7_output_nangate15_rich\\nangate15_gnn_dataset_radar_rich.pkl.gz",
-    "SAED14=C:\\0_ht_diff_lib\\plz_result\\03_7_output_saed14_rich\\saed14_gnn_dataset_radar_rich.pkl.gz"
+    "ASAP7=./03_7_output_asap7_rich/asap7_gnn_dataset_radar_rich.pkl.gz",
+    "NANGATE15=./03_7_output_nangate15_rich/nangate15_gnn_dataset_radar_rich.pkl.gz",
+    "SAED14=./03_7_output_saed14_rich/saed14_gnn_dataset_radar_rich.pkl.gz"
   ],
   "directions": [
     "ASAP7->NANGATE15",
@@ -13,7 +13,7 @@
     "SAED14->NANGATE15"
   ],
   "models": "gnn4gate_like,trojansaint_like,fpgnn_like,raw_sage",
-  "out_dir": "baseline_ht\\runs\\full_baselines",
+  "out_dir": "runs/full_baselines",
   "seed": 7,
   "epochs": 50,
   "patience": 10,
@@ -31,5 +31,5 @@
   "max_files_per_lib": 0,
   "max_samples_per_lib": 0,
   "cpu": false,
-  "timestamp": 1776081384
+  "timestamp": 1776088199
 }

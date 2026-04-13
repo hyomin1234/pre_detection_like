@@ -1,0 +1,53 @@
+{
+  "coarse_family_vocab": {
+    "<UNK>": 0,
+    "PI": 1,
+    "PO": 2,
+    "CONST": 3,
+    "SEQ": 4,
+    "INV": 5,
+    "BUF": 6,
+    "MUX": 7,
+    "XNOR": 8,
+    "XOR": 9,
+    "ARITH": 10,
+    "AOI": 11,
+    "OAI": 12,
+    "NAND": 13,
+    "NOR": 14,
+    "AND": 15,
+    "OR": 16,
+    "AO_OA": 17,
+    "ASSIGN": 18,
+    "OTHER": 19
+  },
+  "raw_cell_vocab": {
+    "<UNK>": 0,
+    "AND": 1,
+    "OR": 2,
+    "NAND": 3,
+    "NOR": 4,
+    "XOR": 5,
+    "XNOR": 6,
+    "INV": 7,
+    "BUF": 8,
+    "MUX": 9,
+    "DFF": 10,
+    "LATCH": 11,
+    "FA": 12,
+    "HA": 13,
+    "AOI": 14,
+    "OAI": 15,
+    "AO": 16,
+    "OA": 17,
+    "TIEHI": 18,
+    "TIELO": 19
+  },
+  "kind_vocab": {
+    "<UNK>": 0,
+    "CELL": 1,
+    "ASSIGN": 2,
+    "PORT": 3,
+    "PUNK": 4
+  }
+}
