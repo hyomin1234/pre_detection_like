@@ -1,4 +1,0 @@
-model,source_lib,target_lib,train_samples,val_samples,test_samples,train_pos_count,train_neg_count,pos_weight,best_epoch,best_val_bal_acc,precision,recall,tnr,f1,bal_acc,fp,fn,tp,tn
-gnn4gate_like,ASAP7,NANGATE15,140,140,285,28,112,4.0,1,0.5,0.0,0.0,1.0,0.0,0.5,0,57,0,228
-trojansaint_like,ASAP7,NANGATE15,140,140,285,28,112,4.0,1,0.5,0.0,0.0,1.0,0.0,0.5,0,57,0,228
-fpgnn_like,ASAP7,NANGATE15,140,140,285,28,112,4.0,1,0.5,0.30952380952380953,0.9122807017543859,0.49122807017543857,0.4622222222222222,0.7017543859649122,116,5,52,112

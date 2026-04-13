@@ -46,11 +46,51 @@ def set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
 
 
+def resolve_model_config(model_name: str, args) -> Dict[str, object]:
+    key = model_name.strip().lower()
+    config: Dict[str, object] = {
+        "hidden_dim": args.hidden_dim,
+        "num_layers": args.num_layers,
+        "dropout": args.dropout,
+        "cat_emb_dim": args.cat_emb_dim,
+        "num_dims": args.num_dims,
+        "clip_log_numeric": args.clip_log_numeric,
+        "use_raw_cell": True,
+        "use_kind": True,
+        "raw_cell_dropout": 0.0,
+        "model_overrides": {},
+    }
+    if key == "gnn4gate_like":
+        config.update(
+            {
+                "hidden_dim": 32,
+                "num_layers": 2,
+                "dropout": 0.5,
+                "clip_log_numeric": False,
+            }
+        )
+    elif key == "trojansaint_like":
+        config.update(
+            {
+                "dropout": max(args.dropout, 0.30),
+                "clip_log_numeric": False,
+                "use_raw_cell": False,
+                "model_overrides": {
+                    "edge_drop": 0.15,
+                    "node_drop": 0.10,
+                    "use_undirected": True,
+                },
+            }
+        )
+    return config
+
+
 @torch.no_grad()
 def run_eval(model: nn.Module, loader: DataLoader, device: torch.device, thr: float = 0.5):
     model.eval()
     ys = []
     ps = []
+    sample_ids: List[str] = []
     for batch in loader:
         batch = batch.to(device)
         logits = model(batch)
@@ -58,9 +98,14 @@ def run_eval(model: nn.Module, loader: DataLoader, device: torch.device, thr: fl
         y = batch.y.view(-1).detach().cpu().numpy()
         ys.append(y)
         ps.append(prob)
+        batch_ids = getattr(batch, "sample_id", None)
+        if isinstance(batch_ids, (list, tuple)):
+            sample_ids.extend(str(x) for x in batch_ids)
+        elif batch_ids is not None:
+            sample_ids.append(str(batch_ids))
     y_true = np.concatenate(ys, axis=0) if ys else np.zeros((0,), dtype=np.float32)
     y_prob = np.concatenate(ps, axis=0) if ps else np.zeros((0,), dtype=np.float32)
-    return compute_binary_metrics(y_true=y_true, y_prob=y_prob, thr=thr), y_true, y_prob
+    return compute_binary_metrics(y_true=y_true, y_prob=y_prob, thr=thr), y_true, y_prob, sample_ids
 
 
 def train_one_direction(
@@ -95,18 +140,23 @@ def train_one_direction(
         num_workers=args.num_workers,
     )
 
+    model_cfg = resolve_model_config(model_name=model_name, args=args)
     encoder = NodeFeatureEncoder(
         cat_vocab_sizes=cat_vocab_sizes,
-        cat_emb_dim=args.cat_emb_dim,
-        num_dims=args.num_dims,
-        clip_log_numeric=args.clip_log_numeric,
+        cat_emb_dim=int(model_cfg["cat_emb_dim"]),
+        num_dims=int(model_cfg["num_dims"]),
+        clip_log_numeric=bool(model_cfg["clip_log_numeric"]),
+        use_raw_cell=bool(model_cfg["use_raw_cell"]),
+        use_kind=bool(model_cfg["use_kind"]),
+        raw_cell_dropout=float(model_cfg["raw_cell_dropout"]),
     )
     model = build_model(
         name=model_name,
         encoder=encoder,
-        hidden=args.hidden_dim,
-        layers=args.num_layers,
-        dropout=args.dropout,
+        hidden=int(model_cfg["hidden_dim"]),
+        layers=int(model_cfg["num_layers"]),
+        dropout=float(model_cfg["dropout"]),
+        model_overrides=dict(model_cfg["model_overrides"]),
     )
     device = torch.device("cuda" if torch.cuda.is_available() and not args.cpu else "cpu")
     model = model.to(device)
@@ -136,7 +186,7 @@ def train_one_direction(
             optimizer.step()
             losses.append(float(loss.item()))
 
-        val_m, _, _ = run_eval(model, val_loader, device=device, thr=0.5)
+        val_m, _, _, _ = run_eval(model, val_loader, device=device, thr=args.eval_threshold)
         rec = {
             "epoch": epoch,
             "train_loss": float(np.mean(losses)) if losses else 0.0,
@@ -145,6 +195,8 @@ def train_one_direction(
             "val_tnr": val_m.tnr,
             "val_f1": val_m.f1,
             "val_bal_acc": val_m.bal_acc,
+            "val_auroc": val_m.auroc,
+            "val_auprc": val_m.auprc,
             "val_fp": val_m.fp,
             "val_fn": val_m.fn,
         }
@@ -164,10 +216,43 @@ def train_one_direction(
     if best_state is not None:
         model.load_state_dict(best_state)
 
-    test_m, _, _ = run_eval(model, test_loader, device=device, thr=0.5)
+    test_m, y_true_test, y_prob_test, test_sample_ids = run_eval(
+        model,
+        test_loader,
+        device=device,
+        thr=args.eval_threshold,
+    )
 
     run_key = f"{model_name}__{src_lib.name}__to__{tgt_lib.name}"
     hist_path = out_dir / f"history__{run_key}.json"
+    ckpt_dir = out_dir / "checkpoints"
+    pred_dir = out_dir / "predictions"
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    pred_dir.mkdir(parents=True, exist_ok=True)
+    ckpt_path = ckpt_dir / f"checkpoint__{run_key}.pt"
+    pred_path = pred_dir / f"predictions__{run_key}.npz"
+
+    torch.save(
+        {
+            "model": model_name,
+            "source": src_lib.name,
+            "target": tgt_lib.name,
+            "seed": args.seed,
+            "best_epoch": best_epoch,
+            "best_val_bal_acc": best_val_bal,
+            "cat_vocab_sizes": cat_vocab_sizes,
+            "model_config": model_cfg,
+            "state_dict": model.state_dict(),
+        },
+        ckpt_path,
+    )
+    np.savez_compressed(
+        pred_path,
+        y_true=y_true_test.astype(np.int64),
+        y_prob=y_prob_test.astype(np.float32),
+        sample_id=np.asarray(test_sample_ids, dtype=object),
+    )
+
     with hist_path.open("w", encoding="utf-8") as f:
         json.dump(
             {
@@ -176,6 +261,10 @@ def train_one_direction(
                 "target": tgt_lib.name,
                 "best_epoch": best_epoch,
                 "best_val_bal_acc": best_val_bal,
+                "eval_threshold": args.eval_threshold,
+                "model_config": model_cfg,
+                "checkpoint": str(ckpt_path),
+                "predictions": str(pred_path),
                 "history": history,
             },
             f,
@@ -194,6 +283,9 @@ def train_one_direction(
         "pos_weight": pos_weight,
         "best_epoch": best_epoch,
         "best_val_bal_acc": best_val_bal,
+        "eval_threshold": args.eval_threshold,
+        "checkpoint_file": ckpt_path.name,
+        "predictions_file": pred_path.name,
     }
     out.update(test_m.to_dict())
     return out
@@ -237,6 +329,7 @@ def parse_args():
     ap.add_argument("--no-clip-log-numeric", action="store_false", dest="clip_log_numeric")
     ap.add_argument("--max-files-per-lib", type=int, default=0)
     ap.add_argument("--max-samples-per-lib", type=int, default=0)
+    ap.add_argument("--eval-threshold", type=float, default=0.5)
     ap.add_argument("--cpu", action="store_true", help="Force CPU.")
     return ap.parse_args()
 
@@ -296,13 +389,15 @@ def main():
             print(
                 "[RESULT] "
                 f"F1={row['f1']:.4f}  Prec={row['precision']:.4f}  Recall={row['recall']:.4f}  "
-                f"TNR={row['tnr']:.4f}  BalAcc={row['bal_acc']:.4f}  FP={int(row['fp'])} FN={int(row['fn'])}"
+                f"TNR={row['tnr']:.4f}  BalAcc={row['bal_acc']:.4f}  "
+                f"AUROC={row['auroc']:.4f}  AUPRC={row['auprc']:.4f}  "
+                f"FP={int(row['fp'])} FN={int(row['fn'])}"
             )
 
     df = pd.DataFrame(rows)
     df.to_csv(args.out_dir / "per_direction_metrics.csv", index=False)
 
-    summary_cols = ["precision", "recall", "tnr", "f1", "bal_acc", "fp", "fn"]
+    summary_cols = ["precision", "recall", "tnr", "f1", "bal_acc", "auroc", "auprc", "fp", "fn"]
     summary = (
         df.groupby("model", as_index=False)[summary_cols]
         .mean(numeric_only=True)

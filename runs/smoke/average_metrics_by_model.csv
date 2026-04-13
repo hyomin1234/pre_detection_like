@@ -1,2 +1,0 @@
-model,precision,recall,tnr,f1,bal_acc,fp,fn
-raw_sage,0.0,0.0,1.0,0.0,0.5,0.0,89.0

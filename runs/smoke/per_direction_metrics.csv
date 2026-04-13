@@ -1,2 +1,0 @@
-model,source_lib,target_lib,train_samples,val_samples,test_samples,train_pos_count,train_neg_count,pos_weight,best_epoch,best_val_bal_acc,precision,recall,tnr,f1,bal_acc,fp,fn,tp,tn
-raw_sage,ASAP7,NANGATE15,280,140,445,56,224,4.0,1,0.5,0.0,0.0,1.0,0.0,0.5,0,89,0,356
