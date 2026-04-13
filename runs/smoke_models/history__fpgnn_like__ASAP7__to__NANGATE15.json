@@ -1,0 +1,20 @@
+{
+  "model": "fpgnn_like",
+  "source": "ASAP7",
+  "target": "NANGATE15",
+  "best_epoch": 1,
+  "best_val_bal_acc": 0.5,
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 1.1334813833236694,
+      "val_precision": 0.2,
+      "val_recall": 1.0,
+      "val_tnr": 0.0,
+      "val_f1": 0.33333333333333337,
+      "val_bal_acc": 0.5,
+      "val_fp": 112,
+      "val_fn": 0
+    }
+  ]
+}

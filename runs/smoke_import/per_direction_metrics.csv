@@ -1,0 +1,2 @@
+model,source_lib,target_lib,train_samples,val_samples,test_samples,train_pos_count,train_neg_count,pos_weight,best_epoch,best_val_bal_acc,precision,recall,tnr,f1,bal_acc,fp,fn,tp,tn
+gnn4gate_like,ASAP7,NANGATE15,119,21,145,24,95,3.9583333333333335,1,0.5,0.0,0.0,1.0,0.0,0.5,0,29,0,116
