@@ -1,0 +1,2 @@
+model,source_lib,target_lib,train_samples,val_samples,test_samples,train_pos_count,train_neg_count,pos_weight,best_epoch,best_val_bal_acc,eval_threshold,checkpoint_file,predictions_file,precision,recall,tnr,f1,bal_acc,auroc,auprc,fp,fn,tp,tn
+raw_sage,ASAP7,NANGATE15,2,2,4,1,1,1.0,1,0.5,0.5,checkpoint__raw_sage__ASAP7__to__NANGATE15.pt,predictions__raw_sage__ASAP7__to__NANGATE15.npz,0.0,0.0,1.0,0.0,0.5,0.5,0.5,0,2,0,2
